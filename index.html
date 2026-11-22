@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clown Noise Board</title>
+<link rel="manifest" href="app.webmanifest">
+<meta name="theme-color" content="#e3122d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="icon-512.png">
+<link rel="icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: loud, silly, big-top showtime — but tidy enough to use one-handed
+   IDEA: the ringmaster's sound cart under a striped tent awning
+   PICTURE: the scalloped red-and-white awning over a board of fat, tappable tiles
+   COLOUR and TYPE: tent red, big-top yellow, ring blue on white (night: deep plum); Bungee + Nunito
+   LAYOUT: awning band with title, controls row, two labelled tile grids; 2 columns on phones */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#1b0d17);--ink:light-dark(#1d1020,#fff4f6);--soft:light-dark(#6d5a66,#cdb7c3);
+--red:#e3122d;--yel:#ffc531;--blu:#1f6fe5;--card:light-dark(#fff,#2a1524)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:600 16px/1.5 Nunito,system-ui,sans-serif;overflow-x:clip;-webkit-tap-highlight-color:transparent}
+.awning{position:relative;background:repeating-linear-gradient(90deg,var(--red) 0 44px,#fff 44px 88px);padding:28px max(5vw,16px) 46px}
+.awning svg{position:absolute;left:0;right:0;bottom:-1px;width:100%;height:28px;display:block}
+.sign{display:inline-block;background:var(--yel);color:#1d1020;border:4px solid #1d1020;border-radius:18px;padding:10px 20px 8px;box-shadow:6px 6px 0 #1d1020;transform:rotate(-1.5deg)}
+h1{font:400 clamp(28px,6vw,48px)/1.05 Bungee,Impact,sans-serif;margin:0;text-wrap:balance}
+.sign p{margin:4px 0 0;font-size:15px}
+main{max-width:1100px;margin:0 auto;padding:18px max(4vw,14px) 40px}
+.bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:4px 0 8px}
+.btn{font:400 15px Bungee,sans-serif;min-height:48px;padding:0 18px;border-radius:999px;border:3px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn[aria-pressed=true]{background:var(--blu);border-color:var(--blu);color:#fff}
+.vol{display:flex;align-items:center;gap:10px;flex:1 1 200px;font-size:15px;color:var(--soft)}
+.vol input{flex:1;accent-color:var(--red);height:44px}
+.hint{display:none;background:var(--blu);color:#fff;border-radius:14px;padding:10px 14px;margin:8px 0 0;font-size:15px}
+body.edit .hint{display:block}
+h2{font:400 22px/1.1 Bungee,sans-serif;margin:26px 0 12px;display:flex;align-items:center;gap:10px}
+h2::after{content:"";flex:1;height:3px;background:repeating-linear-gradient(90deg,var(--red) 0 10px,transparent 10px 18px)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.pad{position:relative;touch-action:manipulation;user-select:none;-webkit-user-select:none;cursor:pointer;border:3px solid #1d1020;border-radius:22px;min-height:112px;padding:14px 12px 12px;text-align:left;color:#1d1020;box-shadow:0 6px 0 #1d1020;transition:transform .08s,box-shadow .08s;display:flex;flex-direction:column;justify-content:space-between;font:inherit;overflow:hidden}
+.pad b{font:400 17px/1.1 Bungee,sans-serif}
+.pad span{font-size:13px;opacity:.85}
+.pad svg{width:34px;height:34px}
+.pad.r{background:var(--red);color:#fff}.pad.y{background:var(--yel)}.pad.b{background:var(--blu);color:#fff}
+.pad:active,.pad.hit{transform:translateY(5px);box-shadow:0 1px 0 #1d1020}
+.pad:focus-visible,.btn:focus-visible{outline:4px solid var(--blu);outline-offset:3px}
+.pad::after{content:"";position:absolute;inset:0;border-radius:inherit;background:radial-gradient(circle at var(--x,50%) var(--y,50%),rgba(255,255,255,.55),transparent 60%);opacity:0;pointer-events:none}
+.pad.hit::after{animation:pop .45s ease-out}
+.tag{position:absolute;top:10px;right:10px;font:800 11px Nunito,sans-serif;background:#1d1020;color:#fff;border-radius:99px;padding:2px 8px}
+body.edit .pad{outline:3px dashed var(--ink);outline-offset:3px}
+@keyframes pop{from{opacity:1}to{opacity:0}}
+.sheet{position:fixed;inset:auto 0 0 0;background:var(--card);color:var(--ink);border-top:4px solid var(--ink);border-radius:22px 22px 0 0;padding:20px max(5vw,16px) calc(20px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px rgba(0,0,0,.25);transform:translateY(110%);transition:transform .2s;z-index:5}
+.sheet.open{transform:none}
+.sheet h3{font:400 20px Bungee,sans-serif;margin:0 0 4px}
+.sheet p{margin:0 0 14px;color:var(--soft);font-size:15px}
+.sheet .row{display:flex;flex-wrap:wrap;gap:10px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,40px);opacity:0;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:15px;transition:.2s;z-index:6;max-width:90vw}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.note{color:var(--soft);font-size:14px;margin-top:28px;max-width:70ch}
+.note a{color:inherit}
+@media(max-width:600px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pad{min-height:104px}.pad b{font-size:15px}.awning{padding-top:22px}}
+@media(prefers-reduced-motion:reduce){.pad,.pad::after,.sheet,.toast{transition:none;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="awning">
+  <div class="sign"><h1>Clown Noise Board</h1><p>Tap a tile. Honk responsibly.</p></div>
+  <svg viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true"><path id="scallop" fill="var(--bg)" d=""/></svg>
+</header>
+<main>
+  <div class="bar">
+    <button class="btn" id="stop" type="button">Stop all</button>
+    <button class="btn ghost" id="edit" type="button" aria-pressed="false">Swap sounds</button>
+    <label class="vol" for="vol">Volume <input id="vol" type="range" min="0" max="1" step="0.05" value="0.9"></label>
+  </div>
+  <p class="hint">Swap mode: tap any tile to load your own sound onto it: an audio file (MP3, M4A, WAV) or a short video such as a screen recording. Silence at the start and end is cut off. Tap Swap sounds again when you're done.</p>
+  <h2>Clown</h2>
+  <div class="grid" id="clown"></div>
+  <h2>Big top</h2>
+  <div class="grid" id="top"></div>
+  <p class="note">On iPhone, flip the silent switch off if you hear nothing. Sounds you load with Swap sounds stay on this device only; to put a sound on every device, add it to the <code>sounds/</code> folder of the repo.<br><br>
+  Clown horn ("free sound eff") and circus music ("Gaming Sound FX") supplied by the owner. Other recordings: Oculus Audio Pack 1 by Meta, licensed <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> (laughs, boing, banjo, fail, drum roll, snare crash, ta-da); sfx-kit by Wyzowl (applause, fireworks, popper, pop), rubberduck and Thimras on OpenGameArt (spring, gong, cannon) and rubberduckie on Freesound (cymbal swell), all CC0; ship's bell by Nigel K, public domain. Fallback organ version of "Entry of the Gladiators" (Julius Fučík, 1897): note data from the Fairy Lights mod by Paul Fulham (MIT).</p>
+</main>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t">
+  <h3 id="sh-t">Swap sound</h3>
+  <p id="sh-p">Choose a file from your phone.</p>
+  <div class="row">
+    <button class="btn" id="sh-pick" type="button">Choose file</button>
+    <button class="btn ghost" id="sh-reset" type="button">Back to original</button>
+    <button class="btn ghost" id="sh-close" type="button">Cancel</button>
+  </div>
+</div>
+<input type="file" id="file" accept="audio/*,video/*,.mp3,.m4a,.wav,.ogg,.aac,.mp4,.mov" hidden>
+<div class="toast" id="toast" role="status"></div>
+<script>
+{
+const ICON={
+horn:'<path d="M4 14h6l14-8v20l-14-8H4z" fill="currentColor"/><circle cx="28" cy="16" r="3" fill="currentColor"/>',
+laugh:'<circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="3"/><path d="M9 17q7 9 14 0z" fill="currentColor"/><circle cx="11" cy="12" r="2" fill="currentColor"/><circle cx="21" cy="12" r="2" fill="currentColor"/>',
+cushion:'<ellipse cx="15" cy="19" rx="12" ry="8" fill="currentColor"/><path d="M26 15q4-3 5 1" stroke="currentColor" stroke-width="3" fill="none"/>',
+up:'<path d="M4 26L26 6M18 6h8v8" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round"/>',
+spring:'<path d="M6 28h20M8 24q16-3 0-6q16-3 0-6q16-3 0-6" stroke="currentColor" stroke-width="3" fill="none"/>',
+ball:'<circle cx="16" cy="12" r="8" fill="currentColor"/><path d="M6 28h20" stroke="currentColor" stroke-width="3"/><path d="M12 22h8" stroke="currentColor" stroke-width="3" opacity=".5"/>',
+banjo:'<circle cx="11" cy="21" r="8" fill="currentColor"/><path d="M15 17L28 4" stroke="currentColor" stroke-width="4"/>',
+bone:'<path d="M4 12h14l10-6v20l-10-6H4z" fill="currentColor"/>',
+balloon:'<ellipse cx="16" cy="12" rx="8" ry="10" fill="currentColor"/><path d="M16 22q-3 4 1 8" stroke="currentColor" stroke-width="2" fill="none"/>',
+tent:'<path d="M16 3L3 27h26z" fill="currentColor"/><path d="M16 12l-4 15h8z" fill="var(--c,#fff)"/>',
+drum:'<ellipse cx="16" cy="12" rx="12" ry="5" fill="currentColor"/><path d="M4 12v10q12 9 24 0V12" fill="currentColor" opacity=".7"/>',
+cymbal:'<path d="M2 18q14-10 28 0z" fill="currentColor"/><path d="M16 12V4" stroke="currentColor" stroke-width="3"/>',
+star:'<path d="M16 2l4 9 10 1-7.5 7 2 10-8.5-5-8.5 5 2-10L2 12l10-1z" fill="currentColor"/>',
+clap:'<path d="M9 28l-4-12 4-1 3 7V6h4v14V4h4v16-12h4v14q0 6-8 6z" fill="currentColor"/>',
+bell:'<path d="M6 24q3-3 3-10a7 7 0 0114 0q0 7 3 10z" fill="currentColor"/><circle cx="16" cy="27" r="3" fill="currentColor"/>',
+swell:'<path d="M2 16h4l3-8 4 16 4-12 3 8 3-4h7" stroke="currentColor" stroke-width="3" fill="none" stroke-linejoin="round"/>',
+boom:'<path d="M16 2l3 8 9-3-5 8 7 5-9 1 1 9-6-6-6 6 1-9-9-1 7-5-5-8 9 3z" fill="currentColor"/>',
+fw:'<circle cx="16" cy="14" r="3" fill="currentColor"/><path d="M16 2v6M16 20v6M4 14h6M22 14h6M8 6l4 4M24 6l-4 4M8 22l4-4M24 22l-4-4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>',
+popper:'<path d="M4 28l8-16 8 8z" fill="currentColor"/><circle cx="22" cy="6" r="2" fill="currentColor"/><circle cx="27" cy="12" r="2" fill="currentColor"/><circle cx="17" cy="4" r="1.5" fill="currentColor"/>',
+gong:'<circle cx="16" cy="15" r="10" fill="currentColor"/><path d="M4 3h24M8 3v6M24 3v6" stroke="currentColor" stroke-width="2.5"/>'
+};
+// [section,id,label,sub,icon,colour]
+const PADS=[
+['clown','honk','Popi popi','Clown bulb horn','horn','r'],
+['clown','laugh','Clown laugh','Big belly laugh','laugh','y'],
+['clown','giggle','Giggle','Little titter','laugh','b'],
+['clown','whoopee','Whoopee','Cushion surprise','cushion','r'],
+['clown','boing','Boing','Cartoon bounce','ball','y'],
+['clown','spring','Spring','Jack in the box','spring','b'],
+['clown','slide','Slide whistle','Up and down','up','r'],
+['clown','banjo','Silly banjo','Pratfall tune','banjo','y'],
+['clown','fail','Wah-wah fail','Trick went wrong','bone','b'],
+['clown','pop','Balloon pop','Pop!','balloon','r'],
+['top','march','Circus march','The famous one','tent','y'],
+['top','roll','Drum roll','And now…','drum','b'],
+['top','crash','Snare crash','Joke landed','cymbal','r'],
+['top','tada','Ta-da!','Big finish','star','y'],
+['top','applause','Applause','Crowd goes wild','clap','b'],
+['top','bell','Ring bell','Ringmaster','bell','r'],
+['top','swell','Suspense','Cymbal swell','swell','y'],
+['top','cannon','Cannon','Human cannonball','boom','b'],
+['top','fireworks','Fireworks','Grand finale','fw','r'],
+['top','popper','Confetti','Party popper','popper','y'],
+['top','gong','Gong','Next act','gong','b']
+];
+const COL={r:'#e3122d',y:'#ffc531',b:'#1f6fe5'};
+const $=id=>document.getElementById(id);
+const pad=p=>`<button class="pad ${p[5]}" type="button" data-s="${p[1]}" id="pad-${p[1]}"><svg viewBox="0 0 32 32" aria-hidden="true" style="--c:${COL[p[5]]}">${ICON[p[4]]}</svg><div><b>${p[2]}</b><br><span>${p[3]}</span></div><i class="tag" hidden></i></button>`;
+$('clown').innerHTML=PADS.filter(p=>p[0]==='clown').map(pad).join('');
+$('top').innerHTML=PADS.filter(p=>p[0]==='top').map(pad).join('');
+let d='M0 10V0';for(let i=0;i<20;i++){d+=` Q${i*5+2.5} 9 ${i*5+5} 0`}$('scallop').setAttribute('d',d+'V10z');
+
+// ---------- audio engine ----------
+const C=window.AudioContext||window.webkitAudioContext;
+const A=new C();let M,vol=0.9,NB=null;
+function newMaster(){M=A.createGain();M.gain.value=vol;M.connect(A.destination)}newMaster();
+const BUF={},CUSTOM={};
+function b64(s){const bin=atob(s),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u.buffer}
+function decode(ab){return new Promise((res,rej)=>{const p=A.decodeAudioData(ab,res,rej);if(p&&p.then)p.then(res,rej)})}
+// cut silence off the start and end (screen recordings have plenty)
+function trim(b){const ch=[];for(let c=0;c<b.numberOfChannels;c++)ch.push(b.getChannelData(c));
+ let peak=0;for(const d of ch)for(let i=0;i<d.length;i+=4)peak=Math.max(peak,Math.abs(d[i]));if(!peak)return b;
+ const th=peak*0.04,loud=i=>ch.some(d=>Math.abs(d[i])>th);let s=0,e=b.length-1;while(s<e&&!loud(s))s++;while(e>s&&!loud(e))e--;
+ const pad=Math.floor(b.sampleRate*.03);s=Math.max(0,s-pad);e=Math.min(b.length-1,e+pad*3);if(s===0&&e===b.length-1)return b;
+ const out=A.createBuffer(b.numberOfChannels,e-s+1,b.sampleRate);ch.forEach((d,c)=>out.getChannelData(c).set(d.subarray(s,e+1)));return out}
+fetch('sounds/manifest.json',{cache:'no-cache'}).then(r=>r.json()).then(m=>{for(const k in m)fetch('sounds/'+m[k]).then(r=>r.arrayBuffer()).then(decode).then(b=>{BUF[k]=b;if(!CUSTOM[k])markCustom(k,false)}).catch(e=>console.log('sound',k,e))}).catch(e=>console.log('manifest',e));
+function playBuf(b,t){const s=A.createBufferSource();s.buffer=b;s.connect(M);s.start(t)}
+
+// synth helpers for the sounds with no free recording
+function env(g,t,a,d,v){g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(v,t+a);g.gain.setValueAtTime(v,t+Math.max(a,d*0.6));g.gain.exponentialRampToValueAtTime(0.0001,t+d)}
+function tone(o){const t=o.t,s=A.createOscillator(),g=A.createGain();s.type=o.type||'sine';s.frequency.setValueAtTime(o.f,t);
+ if(o.pts)o.pts.forEach(([dt,f])=>s.frequency.exponentialRampToValueAtTime(f,t+dt));else if(o.f2)s.frequency.exponentialRampToValueAtTime(o.f2,t+(o.gt||o.d));
+ if(o.vib){const l=A.createOscillator(),lg=A.createGain();l.frequency.value=o.vib[0];lg.gain.value=o.vib[1];l.connect(lg).connect(s.frequency);l.start(t);l.stop(t+o.d+.05)}
+ let n=s;(o.filters||[]).forEach(([ty,f,q,gain])=>{const b=A.createBiquadFilter();b.type=ty;b.frequency.value=f;b.Q.value=q||1;if(gain!=null)b.gain.value=gain;n.connect(b);n=b});
+ env(g,t,o.a||.01,o.d,o.v||.3);n.connect(g).connect(M);s.start(t);s.stop(t+o.d+.05)}
+function nbuf(){if(!NB){NB=A.createBuffer(1,A.sampleRate*2,A.sampleRate);const c=NB.getChannelData(0);for(let i=0;i<c.length;i++)c[i]=Math.random()*2-1}return NB}
+function noise(o){const t=o.t,s=A.createBufferSource(),f=A.createBiquadFilter(),g=A.createGain();s.buffer=nbuf();s.loop=true;f.type=o.ft||'bandpass';f.frequency.value=o.f;f.Q.value=o.q||1;env(g,t,o.a||.005,o.d,o.v||.2);s.connect(f).connect(g).connect(M);s.start(t,Math.random());s.stop(t+o.d+.05)}
+const mf=m=>440*2**((m-69)/12);
+// [duration in ticks, note numbers (0 = F#3)] — from the Fairy Lights mod by Paul Fulham (MIT)
+const GLAD=[[4,10,18],[4,10,17],[2,16],[2,17],[2,16],[2,15],[4,10,14],[4,10,13],[4,8,12],[4,10,13],[4,10,15],[4,10,14],[2,13],[2,14],[2,13],[2,12],[4,6,11],[4,6,10],[4,5,9],[4,6,10],[4,8,13],[2,8,11],[2,8,11],[4,5,7],[4,5,8],[4,8,13],[2,8,11],[2,8,11],[4,5,7],[4,5,8],[2,5,17],[2,6,18],[2,7,19],[2,8,20],[2,9,21],[2,10,22],[2,11,23],[2,12,24],[2,13],[2,14],[2,15],[2,17],[4,15],[4,13],[4,10,18],[4,10,17],[2,16],[2,17],[2,16],[2,15],[4,10,14],[4,10,13],[4,8,12],[4,10,13],[4,10,15],[4,10,14],[2,13],[2,14],[2,13],[2,12],[4,6,11],[4,6,10],[4,5,9],[4,6,10],[4,5,9],[2,5,9],[2,5,9],[4,5,12],[4,5],[2,13],[2,15],[2,13],[2,12],[4,10],[4,5,13],[4,9,17],[2,9,17],[2,9,17],[4,9,17],[4,9,17],[2,5,17],[2,5,17],[2,5,17],[2,5,17],[2,5,17],[2,5,17],[2,5,17]];
+const SYN={
+honk(t){// "po-pi, po-pi": squeeze gives a low reed note that jumps up as the bulb empties
+ [0,.42].forEach(i=>{const s=t+i,p=[[.07,330],[.1,500],[.27,485],[.32,430]];
+  [['sawtooth',1,.4],['square',1.01,.2],['sawtooth',.497,.12]].forEach(([ty,m,v])=>tone({t:s,type:ty,f:310*m,pts:p.map(([a,f])=>[a,f*m]),d:.33,v,a:.008,vib:[38,6*m],filters:[['peaking',1100,2.5,12],['peaking',2400,3,9],['highpass',180,.7],['lowpass',5000,.7]]}));
+  noise({t:s,f:2600,q:1.2,d:.05,v:.1});noise({t:s+.09,f:3000,q:1.2,d:.04,v:.06})})},
+whoopee(t){tone({t,type:'sawtooth',f:150,pts:[[.15,120],[.7,95],[1.1,70]],d:1.15,v:.6,a:.03,vib:[23,18],filters:[['lowpass',650,5],['peaking',260,2,8]]});noise({t,f:260,q:3,d:1.1,v:.1,a:.04})},
+slide(t){tone({t,f:500,pts:[[.55,1900],[.75,1900],[1.35,420]],d:1.4,v:.32,vib:[6,22],a:.04,filters:[['lowpass',5000,.7]]});noise({t,f:1600,q:2,d:1.4,v:.02,a:.04})},
+march(t){// Entry of the Gladiators (Fučík, 1897), fairground-organ style
+ const T=.062;let x=t;
+ GLAD.forEach(([dur,...n])=>{const len=dur*T,mel=n.length>1?Math.max(...n):n[0],low=n.length>1?Math.min(...n):null;
+  const f=mf(66+mel);
+  tone({t:x,f,d:len*.9,v:.16,a:.008,vib:[6,f*.006]});
+  tone({t:x,f:f*2,d:len*.88,v:.07,a:.008,vib:[6,f*.012]});
+  tone({t:x,f:f*3,d:len*.85,v:.035,a:.008});
+  tone({t:x,type:'square',f,d:len*.88,v:.05,a:.008,filters:[['lowpass',2600,.7]]});
+  if(low!==null){const g=mf(42+low);tone({t:x,type:'triangle',f:g,d:Math.min(len*.8,.2),v:.32,a:.005});tone({t:x,type:'square',f:g,d:Math.min(len*.7,.16),v:.05,a:.005,filters:[['lowpass',900,.7]]})}
+  x+=len});
+ noise({t:x-.1,ft:'highpass',f:6000,q:.5,d:1.2,v:.15})}
+};
+for(const k in SYN){const el=$('pad-'+k);if(el){const tg=el.querySelector('.tag');tg.textContent='synth';tg.hidden=false}}
+
+// ---------- custom sounds (IndexedDB, this browser only) ----------
+let DB=null;
+function idb(){return new Promise(res=>{try{const r=indexedDB.open('clownboard',1);r.onupgradeneeded=()=>r.result.createObjectStore('s');r.onsuccess=()=>{DB=r.result;res(DB)};r.onerror=()=>res(null)}catch(e){res(null)}})}
+function store(mode,fn){return new Promise(res=>{if(!DB)return res(null);try{const tx=DB.transaction('s',mode);const q=fn(tx.objectStore('s'));tx.oncomplete=()=>res(q&&q.result);tx.onerror=()=>res(null)}catch(e){res(null)}})}
+function markCustom(id,on){const tg=$('pad-'+id).querySelector('.tag');if(on){tg.textContent='yours';tg.hidden=false}else{tg.textContent='synth';tg.hidden=!(SYN[id]&&!BUF[id])}}
+idb().then(async db=>{if(!db)return;const keys=await store('readonly',s=>s.getAllKeys())||[];for(const k of keys){const ab=await store('readonly',s=>s.get(k));if(ab){try{CUSTOM[k]=trim(await decode(ab.slice(0)));markCustom(k,true)}catch(e){}}}});
+
+// ---------- UI ----------
+let editing=false,target=null;
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('on'),2400)}
+function play(id){if(A.state!=='running')A.resume();const t=A.currentTime+.02;
+ if(CUSTOM[id])return playBuf(CUSTOM[id],t);
+ if(BUF[id])return playBuf(BUF[id],t);
+ if(SYN[id])return SYN[id](t);
+ toast('Still loading, tap again')}
+document.querySelectorAll('.pad').forEach(btn=>btn.addEventListener('click',e=>{
+ const id=btn.dataset.s;
+ if(editing){target=id;$('sh-t').textContent='Swap “'+btn.querySelector('b').textContent+'”';$('sh-p').textContent=CUSTOM[id]?'This tile plays your own sound right now.':'Pick an audio file from your phone to play on this tile.';$('sh-reset').hidden=!CUSTOM[id];$('sheet').classList.add('open');return}
+ try{play(id)}catch(err){console.log(err)}
+ const r=btn.getBoundingClientRect();btn.style.setProperty('--x',((e.clientX||r.left+r.width/2)-r.left)+'px');btn.style.setProperty('--y',((e.clientY||r.top+r.height/2)-r.top)+'px');
+ btn.classList.remove('hit');void btn.offsetWidth;btn.classList.add('hit');setTimeout(()=>btn.classList.remove('hit'),450)}));
+$('edit').addEventListener('click',()=>{editing=!editing;$('edit').setAttribute('aria-pressed',editing);$('edit').textContent=editing?'Done swapping':'Swap sounds';document.body.classList.toggle('edit',editing)});
+$('sh-close').addEventListener('click',()=>$('sheet').classList.remove('open'));
+$('sh-pick').addEventListener('click',()=>{$('file').value='';$('file').click()});
+$('file').addEventListener('change',async()=>{const f=$('file').files[0];if(!f||!target)return;
+ try{const ab=await f.arrayBuffer();const buf=trim(await decode(ab.slice(0)));CUSTOM[target]=buf;markCustom(target,true);
+  const ok=await store('readwrite',s=>s.put(ab,target));$('sheet').classList.remove('open');
+  toast(ok===null&&!DB?'Loaded — but this browser won’t keep it after closing':'Loaded “'+f.name+'”');
+  if(A.state!=='running')A.resume();playBuf(buf,A.currentTime+.02)}
+ catch(e){toast('Couldn’t read the sound in that file — try MP3, M4A, WAV or an MP4 video')}});
+$('sh-reset').addEventListener('click',async()=>{if(!target)return;delete CUSTOM[target];markCustom(target,false);await store('readwrite',s=>s.delete(target));$('sheet').classList.remove('open');toast('Back to the original sound')});
+$('stop').addEventListener('click',()=>{try{M.disconnect()}catch(e){}newMaster()});
+const vs=$('vol');
+try{const sv=localStorage.getItem('clownVol');if(sv!==null){vs.value=sv;vol=+sv;M.gain.value=vol}}catch(e){}
+vs.addEventListener('input',()=>{vol=+vs.value;M.gain.setTargetAtTime(vol,A.currentTime,.02);try{localStorage.setItem('clownVol',vs.value)}catch(e){}});
+}
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
